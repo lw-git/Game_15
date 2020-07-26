@@ -47,13 +47,25 @@ class Application(tk.Frame):
         # ------------------------Start--------------------------
         self.create_cells()
 
+    # --------------------------Methods------------------------------
     def create_cells(self):
+        freecell = False
         numbers = self.numbers[:]
-        for i in range(0, 15):
-            number = numbers.pop(random.randint(0, len(numbers) - 1))
-            self.cells.append(Cell(self.canvas, self.cell_size,
-                                   random.choice(self.colors),
-                                   number, i % 4, i // 4))
+        for i in range(0, 16):
+            if (random.randint(0, 5000) > 4000 or i == 15) and not freecell:
+                self.add_freecell(i % 4, i // 4)
+                freecell = True
+            else:
+                number = numbers.pop(random.randint(0, len(numbers) - 1))
+                self.cells.append(Cell(self.canvas, self.cell_size,
+                                       random.choice(self.colors),
+                                       number, i % 4, i // 4))
+
+    def add_freecell(self, row, col):
+        self.cells.append(0)
+        self.freecell = [row * self.cell_size, col * self.cell_size,
+                         (row + 1) * self.cell_size,
+                         (col + 1) * self.cell_size]
 
 
 if __name__ == '__main__':
