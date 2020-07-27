@@ -48,24 +48,48 @@ class Application(tk.Frame):
         self.create_cells()
 
     # --------------------------Methods------------------------------
+    def set_start_values(self):
+        self.cells = []
+        self.canvas.delete('all')
+
     def create_cells(self):
         freecell = False
+        freecell_row = None
         numbers = self.numbers[:]
+        self.set_start_values()
         for i in range(0, 16):
             if (random.randint(0, 5000) > 4000 or i == 15) and not freecell:
                 self.add_freecell(i % 4, i // 4)
                 freecell = True
+                freecell_row = i // 4 + 1
             else:
                 number = numbers.pop(random.randint(0, len(numbers) - 1))
                 self.cells.append(Cell(self.canvas, self.cell_size,
                                        random.choice(self.colors),
                                        number, i % 4, i // 4))
 
+        if not self.test_puzzle(freecell_row):
+            self.create_cells()
+
     def add_freecell(self, row, col):
         self.cells.append(0)
         self.freecell = [row * self.cell_size, col * self.cell_size,
                          (row + 1) * self.cell_size,
                          (col + 1) * self.cell_size]
+
+    def test_puzzle(self, fcr):
+        even = 0
+        for i, item in enumerate(self.cells):
+            for j, item in enumerate(self.cells):
+                if j > i:
+                    if self.cells[j] != 0 and self.cells[i] != 0:
+                        if (int(self.cells[i].number) >
+                            int(self.cells[j].number)):
+                                even += 1
+        even += fcr
+        if even % 2 != 0:
+            return False
+        return True
 
 
 if __name__ == '__main__':
