@@ -22,6 +22,13 @@ class Cell():
             self.x + self.size // 2, self.y + self.size // 2,
             text=self.number, justify=tk.CENTER, font="Consolas 25")
 
+    def move(self, direction):
+        delta = {'left': [-self.size, 0], 'right': [self.size, 0],
+                 'up': [0, -self.size], 'down': [0, self.size]}
+
+        self.canvas.move(self.cell_id, *delta[direction])
+        self.canvas.move(self.text_id, *delta[direction])
+
 
 class Application(tk.Frame):
 
@@ -67,6 +74,10 @@ class Application(tk.Frame):
                 self.cells.append(Cell(self.canvas, self.cell_size,
                                        random.choice(self.colors),
                                        number, i % 4, i // 4))
+                self.canvas.tag_bind(self.cells[i].cell_id,
+                                     "<Button-1>", self.click_on_cell)
+                self.canvas.tag_bind(self.cells[i].text_id,
+                                     "<Button-1>", self.click_on_cell)
 
         if not self.test_puzzle(freecell_row):
             self.create_cells()
@@ -90,6 +101,39 @@ class Application(tk.Frame):
         if even % 2 != 0:
             return False
         return True
+
+    def click_on_cell(self, event):
+        x = event.x // self.cell_size
+        y = event.y // self.cell_size
+
+        current = self.cells[x + y * 4]
+        if current != 0:
+            coords = self.canvas.coords(current.cell_id)
+            fc = self.freecell
+
+            if coords[0] + self.cell_size == fc[0] and coords[1] == fc[1]:
+                current.move('right')
+                self.cells[x + 1 + y * 4] = current
+                self.freecell = coords
+                self.cells[x + y * 4] = 0
+
+            elif coords[0] - self.cell_size == fc[0] and coords[1] == fc[1]:
+                current.move('left')
+                self.cells[x - 1 + y * 4] = current
+                self.freecell = coords
+                self.cells[x + y * 4] = 0
+
+            elif coords[1] + self.cell_size == fc[1] and coords[0] == fc[0]:
+                current.move('down')
+                self.cells[x + y * 4 + 4] = current
+                self.freecell = coords
+                self.cells[x + y * 4] = 0
+
+            elif coords[1] - self.cell_size == fc[1] and coords[0] == fc[0]:
+                current.move('up')
+                self.cells[x + y * 4 - 4] = current
+                self.freecell = coords
+                self.cells[x + y * 4] = 0
 
 
 if __name__ == '__main__':
