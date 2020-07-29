@@ -135,6 +135,20 @@ class Application(tk.Frame):
                 self.freecell = coords
                 self.cells[x + y * 4] = 0
 
+        if self.is_win():
+            self.show_win_screen()
+
+    def show_win_screen(self):
+        self.canvas.delete('all')
+        self.canvas.create_text(self.cell_size * 2,
+                                self.cell_size * 2,
+                                text='You Win', justify=tk.CENTER,
+                                font="Consolas 25")
+
+    def is_win(self):
+        return ([i.number if i != 0 else 0 for i in self.cells] ==
+                self.numbers + [0])
+
 
 if __name__ == '__main__':
     root = tk.Tk()
