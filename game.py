@@ -1,5 +1,6 @@
 import tkinter as tk
 import random
+import time
 
 
 class Cell():
@@ -42,9 +43,14 @@ class Application(tk.Frame):
                        "spring green", "rosybrown", "lawngreen", "deep pink",
                        "cyan", "lightblue", "lime", "violet",
                        "gold", "orange", "firebrick1", "deepskyblue"]
-        self.numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9',
-                        '10', '11', '12', '13', '14', '15']
+        self.numbers = [str(i) for i in range(1, 16)]
         self.freecell = None
+        self.moves = 0
+        self.start_time = None
+        self.finish_time = None
+        self.game_time = 0
+        self.str_time = None
+        self.is_play = False
 
         # -----------------------Widgets-------------------------
         self.canvas = tk.Canvas(root, width=4 * self.cell_size,
@@ -54,10 +60,15 @@ class Application(tk.Frame):
         # ------------------------Start--------------------------
         self.create_cells()
 
-    # --------------------------Methods------------------------------
+    # -------------------------Start Methods----------------------------
     def set_start_values(self):
         self.cells = []
         self.canvas.delete('all')
+        self.moves = 0
+        self.start_time = None
+        self.finish_time = None
+        self.game_time = 0
+        self.str_time = None
 
     def create_cells(self):
         freecell = False
@@ -81,6 +92,9 @@ class Application(tk.Frame):
 
         if not self.test_puzzle(freecell_row):
             self.create_cells()
+        else:
+            self.start_time = time.time()
+            self.is_play = True
 
     def add_freecell(self, row, col):
         self.cells.append(0)
@@ -102,12 +116,22 @@ class Application(tk.Frame):
             return False
         return True
 
+    # -----------------------Service Methods----------------------------
+    def time_from_seconds(self, t):
+        hours, seconds = divmod(t, 3600)
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = int(hours), int(minutes)
+        return '{:0>2}'.format(hours) + ':' + '{:0>2}'.format(minutes) + \
+            ':' + '{:05.2f}'.format(seconds)
+
+    # ------------------------Game Methods------------------------------
     def click_on_cell(self, event):
         x = event.x // self.cell_size
         y = event.y // self.cell_size
 
         current = self.cells[x + y * 4]
         if current != 0:
+            self.moves += 1
             coords = self.canvas.coords(current.cell_id)
             fc = self.freecell
 
@@ -136,18 +160,40 @@ class Application(tk.Frame):
                 self.cells[x + y * 4] = 0
 
         if self.is_win():
+            self.finish_time = time.time()
+            self.is_play = False
+            self.game_time += self.finish_time - self.start_time
+            self.str_time = self.time_from_seconds(self.game_time)
             self.show_win_screen()
-
-    def show_win_screen(self):
-        self.canvas.delete('all')
-        self.canvas.create_text(self.cell_size * 2,
-                                self.cell_size * 2,
-                                text='You Win', justify=tk.CENTER,
-                                font="Consolas 25")
 
     def is_win(self):
         return ([i.number if i != 0 else 0 for i in self.cells] ==
                 self.numbers + [0])
+
+    # --------------------------Screens---------------------------------
+    def show_win_screen(self):
+        self.canvas.delete('all')
+        font_size = self.cell_size // 6
+        button = tk.Button(text='Play again',
+                           command=self.create_cells,
+                           justify=tk.CENTER, font=f"Consolas {font_size}")
+        self.canvas.create_text(self.cell_size * 2,
+                                self.cell_size,
+                                text='You Win', justify=tk.CENTER,
+                                font=f"Consolas {font_size}")
+        self.canvas.create_text(self.cell_size * 2,
+                                self.cell_size * 1.5,
+                                text=f'Moves: {self.moves}',
+                                justify=tk.CENTER,
+                                font=f"Consolas {font_size}")
+        self.canvas.create_text(self.cell_size * 2,
+                                self.cell_size * 2,
+                                text=f'Time: {self.str_time}',
+                                justify=tk.CENTER,
+                                font=f"Consolas {font_size}")
+        self.canvas.create_window(self.cell_size * 2,
+                                  self.cell_size * 2.5,
+                                  window=button)
 
 
 if __name__ == '__main__':
