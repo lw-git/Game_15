@@ -58,7 +58,7 @@ class Application(tk.Frame):
         self.canvas.pack()
 
         # ------------------------Start--------------------------
-        self.create_cells()
+        self.show_start_screen()
 
     # -------------------------Start Methods----------------------------
     def set_start_values(self):
@@ -193,6 +193,16 @@ class Application(tk.Frame):
                                 font=f"Consolas {font_size}")
         self.canvas.create_window(self.cell_size * 2,
                                   self.cell_size * 2.5,
+                                  window=button)
+
+    def show_start_screen(self):
+        self.canvas.delete('all')
+        button = tk.Button(text='Start play',
+                           command=self.create_cells,
+                           justify=tk.CENTER,
+                           font=f"Consolas {self.cell_size // 6}")
+        self.canvas.create_window(self.cell_size * 2,
+                                  self.cell_size * 2,
                                   window=button)
 
 
