@@ -53,6 +53,19 @@ class Application(tk.Frame):
         self.is_play = False
 
         # -----------------------Widgets-------------------------
+        mainmenu = tk.Menu(root)
+        root.config(menu=mainmenu)
+        gamemenu = tk.Menu(mainmenu, tearoff=0)
+        gamemenu.add_command(label="New game", command=self.create_cells)
+        gamemenu.add_command(label="Decrease cell size", command=None)
+        gamemenu.add_command(label="Increase cell size", command=None)
+        gamemenu.add_command(label="Exit", command=lambda: root.destroy())
+        infomenu = tk.Menu(mainmenu, tearoff=0)
+        infomenu.add_command(label="Records", command=None)
+        infomenu.add_command(label="About", command=None)
+        mainmenu.add_cascade(label="Game", menu=gamemenu)
+        mainmenu.add_cascade(label="Info", menu=infomenu)
+
         self.canvas = tk.Canvas(root, width=4 * self.cell_size,
                                 height=4 * self.cell_size, bg='white')
         self.canvas.pack()
