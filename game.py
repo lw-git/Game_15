@@ -21,7 +21,8 @@ class Cell():
             fill=self.color)
         self.text_id = self.canvas.create_text(
             self.x + self.size // 2, self.y + self.size // 2,
-            text=self.number, justify=tk.CENTER, font="Consolas 25")
+            text=self.number, justify=tk.CENTER,
+            font=f"Consolas {self.size // 3}")
 
     def move(self, direction):
         delta = {'left': [-self.size, 0], 'right': [self.size, 0],
@@ -29,6 +30,17 @@ class Cell():
 
         self.canvas.move(self.cell_id, *delta[direction])
         self.canvas.move(self.text_id, *delta[direction])
+
+    def resize(self, new_size, x, y):
+        self.size = new_size
+        self.x = x * self.size
+        self.y = y * self.size
+        font_size = self.size // 3
+        self.canvas.coords(self.cell_id, self.x, self.y,
+                           self.x + self.size, self.y + self.size)
+        self.canvas.coords(self.text_id, self.x + self.size // 2,
+                           self.y + self.size // 2)
+        self.canvas.itemconfigure(self.text_id, font=f"Consolas {font_size}")
 
 
 class Application(tk.Frame):
@@ -57,8 +69,10 @@ class Application(tk.Frame):
         root.config(menu=mainmenu)
         gamemenu = tk.Menu(mainmenu, tearoff=0)
         gamemenu.add_command(label="New game", command=self.create_cells)
-        gamemenu.add_command(label="Decrease cell size", command=None)
-        gamemenu.add_command(label="Increase cell size", command=None)
+        gamemenu.add_command(label="Decrease cell size",
+                             command=lambda: self.resize(self.cell_size - 25))
+        gamemenu.add_command(label="Increase cell size",
+                             command=lambda: self.resize(self.cell_size + 25))
         gamemenu.add_command(label="Exit", command=lambda: root.destroy())
         infomenu = tk.Menu(mainmenu, tearoff=0)
         infomenu.add_command(label="Records", command=None)
@@ -111,9 +125,8 @@ class Application(tk.Frame):
 
     def add_freecell(self, row, col):
         self.cells.append(0)
-        self.freecell = [row * self.cell_size, col * self.cell_size,
-                         (row + 1) * self.cell_size,
-                         (col + 1) * self.cell_size]
+        self.freecell = [self._size(1, row), self._size(1, col),
+                         self._size(1, row + 1), self._size(1, col + 1)]
 
     def test_puzzle(self, fcr):
         even = 0
@@ -130,6 +143,29 @@ class Application(tk.Frame):
         return True
 
     # -----------------------Service Methods----------------------------
+    def _size(self, num, mul=1):
+        return self.cell_size // num * mul
+
+    def resize(self, size):
+        size = size if size >= 100 else 100
+        size = size if size <= 200 else 200
+        self.cell_size = size
+
+        for i, cell in enumerate(self.cells):
+            if cell != 0:
+                x = i % 4
+                y = i // 4
+                cell.resize(self.cell_size, x, y)
+            else:
+                self.freecell = [self._size(1, i % 4),
+                                 self._size(1, i // 4),
+                                 self._size(1, i % 4 + 1),
+                                 self._size(1, i % 4 + 1)]
+        self.canvas['height'] = self._size(1, 4)
+        self.canvas['width'] = self._size(1, 4)
+        if not self.is_play:
+            self.show_start_screen()
+
     def time_from_seconds(self, t):
         hours, seconds = divmod(t, 3600)
         minutes, seconds = divmod(seconds, 60)
@@ -186,36 +222,33 @@ class Application(tk.Frame):
     # --------------------------Screens---------------------------------
     def show_win_screen(self):
         self.canvas.delete('all')
-        font_size = self.cell_size // 6
         button = tk.Button(text='Play again',
                            command=self.create_cells,
-                           justify=tk.CENTER, font=f"Consolas {font_size}")
-        self.canvas.create_text(self.cell_size * 2,
-                                self.cell_size,
+                           justify=tk.CENTER, font=f"Consolas {self._size(6)}")
+        self.canvas.create_text(self._size(1, 2),
+                                self._size(1),
                                 text='You Win', justify=tk.CENTER,
-                                font=f"Consolas {font_size}")
-        self.canvas.create_text(self.cell_size * 2,
-                                self.cell_size * 1.5,
+                                font=f"Consolas {self._size(6)}")
+        self.canvas.create_text(self._size(1, 2),
+                                self._size(1, 1.5),
                                 text=f'Moves: {self.moves}',
                                 justify=tk.CENTER,
-                                font=f"Consolas {font_size}")
-        self.canvas.create_text(self.cell_size * 2,
-                                self.cell_size * 2,
+                                font=f"Consolas {self._size(6)}")
+        self.canvas.create_text(self._size(1, 2),
+                                self._size(1, 2),
                                 text=f'Time: {self.str_time}',
                                 justify=tk.CENTER,
-                                font=f"Consolas {font_size}")
-        self.canvas.create_window(self.cell_size * 2,
-                                  self.cell_size * 2.5,
+                                font=f"Consolas {self._size(7)}")
+        self.canvas.create_window(self._size(1, 2),
+                                  self._size(1, 2.5),
                                   window=button)
 
     def show_start_screen(self):
         self.canvas.delete('all')
         button = tk.Button(text='Start play',
                            command=self.create_cells,
-                           justify=tk.CENTER,
-                           font=f"Consolas {self.cell_size // 6}")
-        self.canvas.create_window(self.cell_size * 2,
-                                  self.cell_size * 2,
+                           justify=tk.CENTER, font=f"Consolas {self._size(6)}")
+        self.canvas.create_window(self._size(1, 2), self._size(1, 2),
                                   window=button)
 
 
