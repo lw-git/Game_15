@@ -4,7 +4,7 @@ import time
 
 
 class Cell():
-    def __init__(self, canvas, size, color, number, x, y):
+    def __init__(self, canvas, size, color, number, x, y, fn):
         self.cell_id = None
         self.text_id = None
         self.canvas = canvas
@@ -13,6 +13,7 @@ class Cell():
         self.number = number
         self.x = x * self.size
         self.y = y * self.size
+        self.fn = fn
         self.create()
 
     def create(self):
@@ -23,6 +24,8 @@ class Cell():
             self.x + self.size // 2, self.y + self.size // 2,
             text=self.number, justify=tk.CENTER,
             font=f"Consolas {self.size // 3}")
+        self.canvas.tag_bind(self.cell_id, "<Button-1>", self.fn)
+        self.canvas.tag_bind(self.text_id, "<Button-1>", self.fn)
 
     def move(self, direction):
         delta = {'left': [-self.size, 0], 'right': [self.size, 0],
@@ -30,6 +33,7 @@ class Cell():
 
         self.canvas.move(self.cell_id, *delta[direction])
         self.canvas.move(self.text_id, *delta[direction])
+        self.x, self.y, *_ = self.canvas.coords(self.cell_id)
 
     def resize(self, new_size, x, y):
         self.size = new_size
@@ -63,6 +67,7 @@ class Application(tk.Frame):
         self.game_time = 0
         self.str_time = None
         self.is_play = False
+        self.is_pause = False
 
         # -----------------------Widgets-------------------------
         mainmenu = tk.Menu(root)
@@ -76,7 +81,7 @@ class Application(tk.Frame):
         gamemenu.add_command(label="Exit", command=lambda: root.destroy())
         infomenu = tk.Menu(mainmenu, tearoff=0)
         infomenu.add_command(label="Records", command=None)
-        infomenu.add_command(label="About", command=None)
+        infomenu.add_command(label="About", command=self.show_about)
         mainmenu.add_cascade(label="Game", menu=gamemenu)
         mainmenu.add_cascade(label="Info", menu=infomenu)
 
@@ -111,11 +116,8 @@ class Application(tk.Frame):
                 number = numbers.pop(random.randint(0, len(numbers) - 1))
                 self.cells.append(Cell(self.canvas, self.cell_size,
                                        random.choice(self.colors),
-                                       number, i % 4, i // 4))
-                self.canvas.tag_bind(self.cells[i].cell_id,
-                                     "<Button-1>", self.click_on_cell)
-                self.canvas.tag_bind(self.cells[i].text_id,
-                                     "<Button-1>", self.click_on_cell)
+                                       number, i % 4, i // 4,
+                                       self.click_on_cell))
 
         if not self.test_puzzle(freecell_row):
             self.create_cells()
@@ -215,11 +217,46 @@ class Application(tk.Frame):
             self.str_time = self.time_from_seconds(self.game_time)
             self.show_win_screen()
 
+    def pause(self):
+        if not self.is_pause:
+            self.is_pause = True
+            if self.is_play:
+                current_time = time.time()
+                self.game_time += current_time - self.start_time
+                self.start_time = None
+
+    def unpause(self):
+        if self.is_pause:
+            self.is_pause = False
+            if self.is_play:
+                self.start_time = time.time()
+                self.canvas.delete('all')
+                [cell.create() for cell in self.cells if cell != 0]
+            else:
+                self.show_start_screen()
+
     def is_win(self):
         return ([i.number if i != 0 else 0 for i in self.cells] ==
                 self.numbers + [0])
 
     # --------------------------Screens---------------------------------
+    def show_about(self):
+        self.pause()
+        self.canvas.delete('all')
+        button = tk.Button(text='OK', command=self.unpause,
+                           justify=tk.CENTER,
+                           font=f"Consolas {self._size(7)}")
+        self.canvas.create_text(
+            self._size(1, 2),
+            self._size(1, 1.5),
+            text='This is a simple puzzle\n "Game 15".',
+            justify=tk.CENTER,
+            font=f"Consolas {self._size(6)}")
+        self.canvas.create_window(
+            self._size(1, 2),
+            self._size(1, 2),
+            window=button)
+
     def show_win_screen(self):
         self.canvas.delete('all')
         button = tk.Button(text='Play again',
