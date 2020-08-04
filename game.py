@@ -1,6 +1,34 @@
 import tkinter as tk
 import random
 import time
+import pickle
+from operator import itemgetter
+
+
+class Records():
+    def __init__(self):
+        self.data = {'moves': [], 'time': []}
+        self.load()
+
+    def save(self):
+        self.sort_records()
+        with open('records.pickle', 'wb') as f:
+            pickle.dump(self.data, f)
+
+    def load(self):
+        try:
+            with open('records.pickle', 'rb') as f:
+                self.data = pickle.load(f)
+        except IOError:
+            self.data = {'moves': [], 'time': []}
+
+    def sort_records(self):
+        self.data['time'] = sorted(self.data['time'],
+                                   key=itemgetter('time', 'moves'))
+        self.data['moves'] = sorted(self.data['moves'],
+                                    key=itemgetter('moves', 'time'))
+        self.data['time'] = self.data['time'][:10]
+        self.data['moves'] = self.data['moves'][:10]
 
 
 class Cell():
@@ -68,6 +96,7 @@ class Application(tk.Frame):
         self.str_time = None
         self.is_play = False
         self.is_pause = False
+        self.records = Records()
 
         # -----------------------Widgets-------------------------
         mainmenu = tk.Menu(root)
@@ -80,7 +109,7 @@ class Application(tk.Frame):
                              command=lambda: self.resize(self.cell_size + 25))
         gamemenu.add_command(label="Exit", command=lambda: root.destroy())
         infomenu = tk.Menu(mainmenu, tearoff=0)
-        infomenu.add_command(label="Records", command=None)
+        infomenu.add_command(label="Records", command=self.show_records)
         infomenu.add_command(label="About", command=self.show_about)
         mainmenu.add_cascade(label="Game", menu=gamemenu)
         mainmenu.add_cascade(label="Info", menu=infomenu)
@@ -167,6 +196,14 @@ class Application(tk.Frame):
         self.canvas['width'] = self._size(1, 4)
         if not self.is_play:
             self.show_start_screen()
+        elif self.is_pause:
+            self.show_start_screen()
+
+    def save_record(self):
+        record = {'moves': self.moves, 'time': self.str_time}
+        self.records.data['moves'].append(record)
+        self.records.data['time'].append(record)
+        self.records.save()
 
     def time_from_seconds(self, t):
         hours, seconds = divmod(t, 3600)
@@ -215,6 +252,7 @@ class Application(tk.Frame):
             self.is_play = False
             self.game_time += self.finish_time - self.start_time
             self.str_time = self.time_from_seconds(self.game_time)
+            self.save_record()
             self.show_win_screen()
 
     def pause(self):
@@ -257,6 +295,39 @@ class Application(tk.Frame):
             self._size(1, 2),
             window=button)
 
+    def show_records(self, param='time'):
+        self.pause()
+        self.canvas.delete('all')
+        param2 = 'moves' if param == 'time' else 'time'
+        text = ''
+        self.canvas.create_text(
+            self._size(1, 2), self._size(7, 1.8), text=f'Top 10 (by {param}):',
+            justify=tk.CENTER, font=f"Consolas {self._size(6)}")
+        if self.records.data[param]:
+            for i, r in enumerate(self.records.data[param]):
+                if param == 'time':
+                    text = f'{i + 1}. Time: {r["time"]} Moves: {r["moves"]}'
+                else:
+                    text = f'{i + 1}. Moves: {r["moves"]} Time: {r["time"]}'
+
+                self.canvas.create_text(
+                    self._size(1, 2),
+                    self._size(2, 1.3) + self._size(7, 1.8) * i,
+                    text=text, justify=tk.CENTER,
+                    font=f"Consolas {self._size(7)}")
+
+        button = tk.Button(text='OK', command=self.unpause,
+                           justify=tk.CENTER,
+                           font=f"Consolas {self._size(6)}")
+        button2 = tk.Button(text=f'by {param2}',
+                            command=lambda: self.show_records(param2),
+                            justify=tk.CENTER,
+                            font=f"Consolas {self._size(6)}")
+        self.canvas.create_window(
+            self._size(1, 1.5), self._size(1, 3.5), window=button)
+        self.canvas.create_window(
+            self._size(1, 3), self._size(1, 3.5), window=button2)
+
     def show_win_screen(self):
         self.canvas.delete('all')
         button = tk.Button(text='Play again',
@@ -282,9 +353,14 @@ class Application(tk.Frame):
 
     def show_start_screen(self):
         self.canvas.delete('all')
-        button = tk.Button(text='Start play',
-                           command=self.create_cells,
-                           justify=tk.CENTER, font=f"Consolas {self._size(6)}")
+        if self.is_play:
+            text = 'Continue play'
+            fn = self.unpause
+        else:
+            text = 'Start play'
+            fn = self.create_cells
+        button = tk.Button(text=text, command=fn, justify=tk.CENTER,
+                           font=f"Consolas {self._size(6)}")
         self.canvas.create_window(self._size(1, 2), self._size(1, 2),
                                   window=button)
 
