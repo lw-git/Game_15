@@ -212,6 +212,22 @@ class Application(tk.Frame):
         return '{:0>2}'.format(hours) + ':' + '{:0>2}'.format(minutes) + \
             ':' + '{:05.2f}'.format(seconds)
 
+    def get_click(self, x, y):
+        self.canvas.event_generate('<ButtonPress-1>', x=x, y=y)
+        self.canvas.event_generate('<ButtonRelease-1>', x=x, y=y)
+
+    def move_freecell(self, direction):
+        args = {'left': [self.freecell[0] - 10, self.freecell[1]],
+                'right': [self.freecell[0] + self.cell_size + 10,
+                          self.freecell[1]],
+                'up': [self.freecell[0],
+                       self.freecell[1] - 10],
+                'down': [self.freecell[0],
+                         self.freecell[1] + self.cell_size + 10]
+                }
+        self.get_click(*args[direction])
+        time.sleep(.3)
+
     # ------------------------Game Methods------------------------------
     def click_on_cell(self, event):
         x = event.x // self.cell_size
