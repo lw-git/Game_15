@@ -3,6 +3,7 @@ import random
 import time
 import pickle
 from operator import itemgetter
+from solver import IDAStar, slide_solved_state, slide_neighbours, slide_wd
 
 
 class Records():
