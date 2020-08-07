@@ -4,6 +4,7 @@ import time
 import pickle
 from operator import itemgetter
 from solver import IDAStar, slide_solved_state, slide_neighbours, slide_wd
+import threading
 
 
 class Records():
@@ -98,6 +99,9 @@ class Application(tk.Frame):
         self.is_play = False
         self.is_pause = False
         self.records = Records()
+        self.is_solving = False
+        self.is_solve = False
+        self.s_moves = []
 
         # -----------------------Widgets-------------------------
         mainmenu = tk.Menu(root)
@@ -108,6 +112,7 @@ class Application(tk.Frame):
                              command=lambda: self.resize(self.cell_size - 25))
         gamemenu.add_command(label="Increase cell size",
                              command=lambda: self.resize(self.cell_size + 25))
+        gamemenu.add_command(label="Solve", command=self.solve)
         gamemenu.add_command(label="Exit", command=lambda: root.destroy())
         infomenu = tk.Menu(mainmenu, tearoff=0)
         infomenu.add_command(label="Records", command=self.show_records)
@@ -131,8 +136,13 @@ class Application(tk.Frame):
         self.finish_time = None
         self.game_time = 0
         self.str_time = None
+        self.is_solving = False
+        self.is_solve = False
+        self.s_moves = []
 
     def create_cells(self):
+        if self.is_solving:
+            return
         freecell = False
         freecell_row = None
         numbers = self.numbers[:]
@@ -179,6 +189,8 @@ class Application(tk.Frame):
         return self.cell_size // num * mul
 
     def resize(self, size):
+        if self.is_solving:
+            return
         size = size if size >= 100 else 100
         size = size if size <= 200 else 200
         self.cell_size = size
@@ -228,6 +240,23 @@ class Application(tk.Frame):
                 }
         self.get_click(*args[direction])
         time.sleep(.3)
+
+    def solve(self):
+        if self.is_solving:
+            return
+        if self.is_play:
+            self.show_ask_screen()
+
+    def change_letters(self, text):
+        dots = ['.' * i for i in range(1, 20)]
+        i = 0
+        while True:
+            if self.is_solve:
+                break
+            s = dots[i % len(dots)]
+            self.canvas.itemconfig(text, text=s)
+            i += 1
+            time.sleep(.5)
 
     # ------------------------Game Methods------------------------------
     def click_on_cell(self, event):
@@ -284,6 +313,10 @@ class Application(tk.Frame):
         if self.is_pause:
             self.is_pause = False
             if self.is_play:
+                if self.is_solving:
+                    current_time = time.time()
+                    self.game_time += current_time - self.start_time
+                    self.start_time = None
                 self.start_time = time.time()
                 self.canvas.delete('all')
                 [cell.create() for cell in self.cells if cell != 0]
@@ -296,6 +329,8 @@ class Application(tk.Frame):
 
     # --------------------------Screens---------------------------------
     def show_about(self):
+        if self.is_solving:
+            return
         self.pause()
         self.canvas.delete('all')
         button = tk.Button(text='OK', command=self.unpause,
@@ -313,6 +348,8 @@ class Application(tk.Frame):
             window=button)
 
     def show_records(self, param='time'):
+        if self.is_solving:
+            return
         self.pause()
         self.canvas.delete('all')
         param2 = 'moves' if param == 'time' else 'time'
@@ -346,6 +383,7 @@ class Application(tk.Frame):
             self._size(1, 3), self._size(1, 3.5), window=button2)
 
     def show_win_screen(self):
+        self.is_solving = False
         self.canvas.delete('all')
         button = tk.Button(text='Play again',
                            command=self.create_cells,
@@ -380,6 +418,53 @@ class Application(tk.Frame):
                            font=f"Consolas {self._size(6)}")
         self.canvas.create_window(self._size(1, 2), self._size(1, 2),
                                   window=button)
+
+    def show_ask_screen(self):
+        self.pause()
+        self.canvas.delete('all')
+        button = tk.Button(text='Yes', command=self.show_solve_screen,
+                           justify=tk.CENTER,
+                           font=f"Consolas {self._size(6)}")
+        button2 = tk.Button(text='No', command=self.unpause,
+                            justify=tk.CENTER,
+                            font=f"Consolas {self._size(6)}")
+        text = ['Solve a puzzle?', 'This can take a long time',
+                '(from 10 seconds to', '15 minutes or more).',
+                'Time depends on the power of',
+                'the computer and the complexity',
+                'of the layout']
+        for i, s in enumerate(text):
+            self.canvas.create_text(
+                self._size(1, 2),
+                self._size(2, 1.3) + self._size(7, 1.8) * i,
+                text=s, justify=tk.CENTER,
+                font=f"Consolas {self._size(7)}")
+
+        self.canvas.create_window(
+            self._size(1, 1.5),
+            self._size(1, 3),
+            window=button)
+        self.canvas.create_window(
+            self._size(1, 2.5),
+            self._size(1, 3),
+            window=button2)
+
+    def show_solve_screen(self):
+        self.is_solving = True
+        self.start_time = time.time()
+        self.canvas.delete('all')
+        self.canvas.create_text(
+            self._size(1, 2),
+            self._size(1, 1.7),
+            text='Solving the puzzle', justify=tk.CENTER,
+            font=f"Consolas {self._size(6)}")
+        text = self.canvas.create_text(
+            self._size(1, 2),
+            self._size(1, 2),
+            text='', justify=tk.CENTER,
+            font=f"Consolas {self._size(6)}")
+        threading.Thread(target=self.change_letters, args=[text],
+                         daemon=True).start()
 
 
 if __name__ == '__main__':
