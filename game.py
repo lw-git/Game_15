@@ -7,6 +7,26 @@ from solver import IDAStar, slide_solved_state, slide_neighbours, slide_wd
 import threading
 
 
+
+class SaveThread(threading.Thread):
+    def __init__(self, callback, *args, **kwargs):
+        threading.Thread.__init__(self, *args, **kwargs)
+        self.callback = callback
+        run_original = self.run
+
+        def run_with_except_hook():
+            try:
+                run_original()
+            except Exception as e:
+                data = 'with error {}'.format(e)
+                self.callback(data)
+            else:
+                data = 'successful'
+                self.callback(data)
+
+        self.run = run_with_except_hook
+
+
 class Records():
     def __init__(self):
         self.data = {'moves': [], 'time': []}
@@ -247,6 +267,17 @@ class Application(tk.Frame):
         if self.is_play:
             self.show_ask_screen()
 
+    def do_solve(self):
+        solved_state = slide_solved_state(4)
+        neighbours = slide_neighbours(4)
+        is_goal = lambda p: p == solved_state
+        board = tuple([int(i.number) if i != 0 else 0 for i in self.cells])
+        slide_solver = IDAStar(slide_wd(4, solved_state), neighbours)
+        _, moves, *_ = slide_solver.solve(board, is_goal, 80)
+
+        self.s_moves = [{-1: "left", 1: "right", -4: "up", 4: "down"}
+                        [move[1]] for move in moves]
+
     def change_letters(self, text):
         dots = ['.' * i for i in range(1, 20)]
         i = 0
@@ -257,6 +288,34 @@ class Application(tk.Frame):
             self.canvas.itemconfig(text, text=s)
             i += 1
             time.sleep(.5)
+
+    def callback(self, data):
+        self.is_solve = True
+        self.canvas.delete('all')
+        if data == 'successful':
+            button = tk.Button(text='Show solution',
+                               command=self.show_solution,
+                               justify=tk.CENTER,
+                               font=f"Consolas {self._size(6)}")
+            self.canvas.create_window(
+                self._size(1, 2),
+                self._size(1, 2),
+                window=button)
+        else:
+            self.canvas.create_text(
+                self._size(1, 2),
+                self._size(1, 2),
+                text='Error while solving puzzle',
+                justify=tk.CENTER,
+                font=f"Consolas {self._size(6)}")
+
+    def show_solution(self):
+        self.unpause()
+        threading.Thread(target=self.do_moves, daemon=True).start()
+
+    def do_moves(self):
+        for move in self.s_moves:
+            self.move_freecell(move)
 
     # ------------------------Game Methods------------------------------
     def click_on_cell(self, event):
@@ -465,6 +524,7 @@ class Application(tk.Frame):
             font=f"Consolas {self._size(6)}")
         threading.Thread(target=self.change_letters, args=[text],
                          daemon=True).start()
+        SaveThread(self.callback, target=self.do_solve, daemon=True).start()
 
 
 if __name__ == '__main__':
