@@ -250,16 +250,20 @@ class Application(tk.Frame):
         self.canvas.event_generate('<ButtonRelease-1>', x=x, y=y)
 
     def move_freecell(self, direction):
-        args = {'left': [self.freecell[0] - 10, self.freecell[1]],
-                'right': [self.freecell[0] + self.cell_size + 10,
-                          self.freecell[1]],
-                'up': [self.freecell[0],
-                       self.freecell[1] - 10],
-                'down': [self.freecell[0],
-                         self.freecell[1] + self.cell_size + 10]
-                }
-        self.get_click(*args[direction])
-        time.sleep(.3)
+        fci = self.cells.index(0)
+        args = {'left': [fci - 1, 'right'],
+                'right': [fci + 1, 'left'],
+                'up': [fci - 4, 'down'],
+                'down': [fci + 4, 'up']}
+
+        if 0 <= args[direction][0] <= 15:
+            current = self.cells[args[direction][0]]
+            self.moves += 1
+            current.move(args[direction][1])
+            self.cells[fci] = current
+            self.freecell = self.canvas.coords(current.cell_id)
+            self.cells[args[direction][0]] = 0
+            time.sleep(.3)
 
     def solve(self):
         if self.is_solving:
@@ -316,9 +320,13 @@ class Application(tk.Frame):
     def do_moves(self):
         for move in self.s_moves:
             self.move_freecell(move)
+        if self.is_win():
+            self.win()
 
     # ------------------------Game Methods------------------------------
     def click_on_cell(self, event):
+        if self.is_solving:
+            return
         x = event.x // self.cell_size
         y = event.y // self.cell_size
 
@@ -352,13 +360,17 @@ class Application(tk.Frame):
                 self.freecell = coords
                 self.cells[x + y * 4] = 0
 
-        if self.is_win():
-            self.finish_time = time.time()
-            self.is_play = False
-            self.game_time += self.finish_time - self.start_time
-            self.str_time = self.time_from_seconds(self.game_time)
-            self.save_record()
-            self.show_win_screen()
+            if self.is_win():
+                self.win()
+
+    def win(self):
+        self.is_solving = False
+        self.is_play = False
+        self.finish_time = time.time()
+        self.game_time += self.finish_time - self.start_time
+        self.str_time = self.time_from_seconds(self.game_time)
+        self.save_record()
+        self.show_win_screen()
 
     def pause(self):
         if not self.is_pause:
